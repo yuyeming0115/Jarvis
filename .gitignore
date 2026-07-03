@@ -1,0 +1,10 @@
+.env
+apps/workbench/data/*.json
+backend/db/*.sqlite3
+logs/*.log
+logs/*.pid
+backups/*
+!backups/.gitkeep
+__pycache__/
+*.pyc
+.DS_Store

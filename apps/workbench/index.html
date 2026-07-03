@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Jarvis Workbench</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Local Jarvis V1.1</p>
+        <h1>Jarvis Workbench</h1>
+      </div>
+      <div class="top-actions">
+        <span id="safeModeBadge" class="status-pill">安全模式</span>
+        <span id="accessBadge" class="status-pill">本机访问</span>
+      </div>
+    </header>
+
+    <main>
+      <section class="summary-grid" aria-label="系统总览">
+        <article class="metric">
+          <span>今日任务</span>
+          <strong id="taskCount">0</strong>
+        </article>
+        <article class="metric">
+          <span>灵感记录</span>
+          <strong id="ideaCount">0</strong>
+        </article>
+        <article class="metric">
+          <span>候选选题</span>
+          <strong id="topicCount">0</strong>
+        </article>
+        <article class="metric">
+          <span>数据源</span>
+          <strong id="dataSource">JSON</strong>
+        </article>
+      </section>
+
+      <section id="errorPanel" class="notice hidden" role="alert"></section>
+      <section id="toastPanel" class="notice success hidden" role="status"></section>
+
+      <section class="panel command-panel">
+        <div class="panel-header">
+          <h2>快速录入</h2>
+          <span class="counter">本地保存</span>
+        </div>
+        <div class="form-grid">
+          <form id="taskForm" class="entry-form">
+            <label>
+              <span>任务</span>
+              <input name="title" type="text" placeholder="周五交 Q3 方案" required>
+            </label>
+            <label>
+              <span>截止时间</span>
+              <input name="due_at" type="text" placeholder="2026-07-05 18:00">
+            </label>
+            <label>
+              <span>优先级</span>
+              <select name="priority">
+                <option>P1</option>
+                <option selected>P2</option>
+                <option>P3</option>
+                <option>P0</option>
+              </select>
+            </label>
+            <button type="submit">新增任务</button>
+          </form>
+
+          <form id="ideaForm" class="entry-form">
+            <label>
+              <span>灵感</span>
+              <textarea name="raw_text" rows="3" placeholder="记录一个想法..." required></textarea>
+            </label>
+            <label>
+              <span>类型</span>
+              <input name="type" type="text" placeholder="灵感">
+            </label>
+            <button type="submit">新增灵感</button>
+          </form>
+
+          <form id="topicForm" class="entry-form">
+            <label>
+              <span>选题</span>
+              <input name="title" type="text" placeholder="普通人如何用 AI Agent 管理一天" required>
+            </label>
+            <label>
+              <span>平台</span>
+              <select name="platform">
+                <option>公众号</option>
+                <option>小红书</option>
+                <option>视频号</option>
+              </select>
+            </label>
+            <label>
+              <span>角度</span>
+              <input name="angle" type="text" placeholder="从任务、灵感、内容三个场景切入">
+            </label>
+            <button type="submit">新增选题</button>
+          </form>
+        </div>
+      </section>
+
+      <section class="workspace-grid">
+        <section class="panel panel-tasks">
+          <div class="panel-header">
+            <h2>今日任务</h2>
+            <span id="urgentCount" class="counter">0 紧急</span>
+          </div>
+          <div id="tasksList" class="stack"></div>
+        </section>
+
+        <section class="panel panel-center">
+          <div class="tabs" aria-label="数据池">
+            <button class="tab active" type="button" data-tab="ideas">灵感池</button>
+            <button class="tab" type="button" data-tab="topics">选题池</button>
+          </div>
+          <div id="ideasList" class="stack tab-panel"></div>
+          <div id="topicsList" class="stack tab-panel hidden"></div>
+        </section>
+
+        <aside class="side-column">
+          <section class="panel">
+            <div class="panel-header">
+              <h2>AI 建议</h2>
+              <span class="counter">占位</span>
+            </div>
+            <div class="suggestion">
+              <strong>下一步建议</strong>
+              <p>先保持本地 JSON 工作台稳定，再进入 V1.1 加入本地 API 和编辑能力。</p>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-header">
+              <h2>服务状态</h2>
+              <span id="workbenchState" class="counter">checking</span>
+            </div>
+            <div id="statusList" class="status-list"></div>
+          </section>
+        </aside>
+      </section>
+
+      <section class="panel logs-panel">
+        <div class="panel-header">
+          <h2>运行日志</h2>
+          <span id="logCount" class="counter">0 条</span>
+        </div>
+        <div id="logsList" class="logs-list"></div>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
