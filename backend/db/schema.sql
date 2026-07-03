@@ -86,9 +86,18 @@ CREATE TABLE IF NOT EXISTS system_status (
   payload_json TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS reminder_notifications (
+  task_id TEXT PRIMARY KEY,
+  due_at TEXT,
+  notified_at TEXT,
+  channel TEXT,
+  status TEXT
+);
+
 CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
 CREATE INDEX IF NOT EXISTS idx_tasks_due_at ON tasks(due_at);
 CREATE INDEX IF NOT EXISTS idx_logs_created_at ON logs(created_at);
 
 CREATE INDEX IF NOT EXISTS idx_messages_platform ON messages(platform);
 CREATE INDEX IF NOT EXISTS idx_messages_received_at ON messages(received_at);
+CREATE INDEX IF NOT EXISTS idx_reminder_notifications_status ON reminder_notifications(status);

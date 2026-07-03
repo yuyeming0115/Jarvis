@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .store import append_log, backup_json, new_id, now, read_json, update_system_status, write_json
+from .store import append_log, backup_json, connect, new_id, now, read_json, update_system_status, write_json
 
 
 def list_tasks() -> list[dict[str, Any]]:
@@ -50,6 +50,9 @@ def patch_task(task_id: str, payload: dict[str, Any]) -> dict[str, Any]:
                     task[key] = payload[key]
             task["updated_at"] = now()
             write_json("tasks", tasks)
+            if any(key in payload for key in ["due_at", "reminder_level", "status"]):
+                with connect() as conn:
+                    conn.execute("DELETE FROM reminder_notifications WHERE task_id = ?", (task_id,))
             append_log("task_update", f"更新任务：{task.get('title', task_id)}", target=task_id)
             update_system_status(backend_api="enabled")
             return task

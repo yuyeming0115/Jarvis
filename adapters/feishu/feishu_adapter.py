@@ -5,6 +5,7 @@ import os
 from typing import Any
 
 from backend.core.messages import create_message
+from backend.core.reminders import parse_due_at_from_text
 from backend.core.store import append_log, backup_json, now, update_system_status
 from backend.gateway.inbox import route_normalized_message
 
@@ -114,8 +115,9 @@ def _normalize_feishu_payload(payload: dict[str, Any], text: str) -> dict[str, A
 
 def _classify_text(text: str) -> dict[str, Any]:
     intent = "idea"
-    if any(word in text for word in ["提醒", "截止", "到期", "明天", "周五", "今天"]):
+    due_at = parse_due_at_from_text(text)
+    if due_at or any(word in text for word in ["提醒", "截止", "到期", "明天", "后天", "周", "星期", "今天", "今晚", "明早"]):
         intent = "task"
     if any(word in text for word in ["选题", "写一篇", "公众号", "小红书", "视频号"]):
         intent = "topic"
-    return {"intent": intent, "title": text}
+    return {"intent": intent, "title": text, "due_at": due_at}

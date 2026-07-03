@@ -4,6 +4,7 @@ from typing import Any
 
 from backend.core.ideas import create_idea
 from backend.core.messages import create_message
+from backend.core.reminders import parse_due_at_from_text
 from backend.core.store import append_log, backup_json, new_id, now
 from backend.core.tasks import create_task
 from backend.core.topics import create_topic
@@ -11,12 +12,13 @@ from backend.core.topics import create_topic
 
 def normalize_message(raw_text: str) -> dict[str, Any]:
     text = raw_text.strip()
+    due_at = parse_due_at_from_text(text)
     intent = "idea"
-    if any(word in text for word in ["提醒", "截止", "到期", "明天", "周五", "今天"]):
+    if due_at or any(word in text for word in ["提醒", "截止", "到期", "明天", "后天", "周", "星期", "今天", "今晚", "明早"]):
         intent = "task"
     if any(word in text for word in ["选题", "写一篇", "公众号", "小红书", "视频号"]):
         intent = "topic"
-    return {
+    normalized = {
         "message_id": new_id("msg"),
         "platform": "web",
         "platform_user_id": "local_user",
@@ -25,10 +27,12 @@ def normalize_message(raw_text: str) -> dict[str, Any]:
         "message_type": "text",
         "received_at": now(),
         "normalized": {
-            "intent": intent
+            "intent": intent,
+            "due_at": due_at,
         },
         "status": "processed",
     }
+    return normalized
 
 
 def handle_inbox(payload: dict[str, Any]) -> dict[str, Any]:
@@ -69,6 +73,8 @@ def route_normalized_message(message: dict[str, Any]) -> dict[str, Any]:
                 "title": raw_text,
                 "description": f"来自 {message.get('platform', 'inbox')} 的任务。",
                 "source": message.get("platform", "inbox"),
+                "due_at": message.get("normalized", {}).get("due_at", ""),
+                "reminder_level": "due" if message.get("normalized", {}).get("due_at") else "none",
             }
         )
     if intent == "topic":

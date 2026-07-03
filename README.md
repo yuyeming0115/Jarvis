@@ -1,6 +1,6 @@
 # Jarvis
 
-本目录是个人 Jarvis 系统的本地工作区。当前版本为 V2.0：飞书入口准备版。
+本目录是个人 Jarvis 系统的本地工作区。当前版本为 V2.1：飞书入口与提醒闭环版。
 
 ## 当前能力
 
@@ -16,7 +16,10 @@
 - 每日维护备份
 - JSON 手动备份脚本
 - 日志轮转
-- 飞书本地回调适配器和模拟测试
+- 飞书真实回调、临时公网回调和模拟测试
+- 飞书提醒文本解析为任务到期时间
+- macOS 本地提醒服务
+- 飞书公网回调健康监控
 
 ## 快速启动
 
@@ -60,13 +63,19 @@ bash "$HOME/Jarvis/services/uninstall-launchd.sh"
 
 ## 安全说明
 
-V2.0 只提供飞书本地回调适配器和模拟测试，暂不配置真实飞书密钥，不接微信、Telegram 或 AI 模型。真实密钥只应写入本地 `.env`，不要粘贴到聊天窗口、日志或代码里。
+真实密钥只应写入本地 `.env`，不要粘贴到聊天窗口、日志或代码里。当前版本只处理你发给 Jarvis 机器人的消息，不抓取公司飞书或公司系统数据。
 
 ## 飞书本地模拟
 
 ```bash
 bash "$HOME/Jarvis/services/simulate-feishu-event.sh" challenge
 bash "$HOME/Jarvis/services/simulate-feishu-event.sh" task
+```
+
+飞书链路回归：
+
+```bash
+bash "$HOME/Jarvis/services/verify-feishu-flow.sh"
 ```
 
 真实飞书接入需要安全 HTTPS 回调地址，不能直接把本机 `127.0.0.1:8080` 暴露公网。
@@ -79,3 +88,18 @@ bash "$HOME/Jarvis/services/show-feishu-callback-url.sh"
 ```
 
 飞书 Verification Token 写入 `$HOME/Jarvis/.env` 后，launchd 启动的 Jarvis 会自动读取。
+
+## 提醒服务
+
+查看所有常驻服务：
+
+```bash
+bash "$HOME/Jarvis/services/status-launchd.sh"
+```
+
+干跑提醒扫描，不弹通知：
+
+```bash
+cd "$HOME/Jarvis"
+python3 -m backend.core.reminders --once --dry-run
+```

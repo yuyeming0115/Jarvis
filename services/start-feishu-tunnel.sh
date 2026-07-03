@@ -21,19 +21,29 @@ if [ -f "$PID_FILE" ]; then
   rm -f "$PID_FILE"
 fi
 
+SUBDOMAIN="${JARVIS_FEISHU_TUNNEL_SUBDOMAIN:-}"
+if [ -z "$SUBDOMAIN" ] && [ -f "$URL_FILE" ]; then
+  CURRENT_HOST="$(sed -nE 's#https://([^./]+)\.loca\.lt.*#\1#p' "$URL_FILE" | tail -n 1 || true)"
+  SUBDOMAIN="$CURRENT_HOST"
+fi
+
 rm -f "$URL_FILE"
 : > "$LOG_FILE"
 
 PID="$(
-  PORT="$PORT" LOG_FILE="$LOG_FILE" python3 - <<'PY'
+  PORT="$PORT" LOG_FILE="$LOG_FILE" SUBDOMAIN="$SUBDOMAIN" python3 - <<'PY'
 import os
 import subprocess
 
 port = os.environ["PORT"]
 log_file = os.environ["LOG_FILE"]
+subdomain = os.environ.get("SUBDOMAIN", "").strip()
 log = open(log_file, "ab")
+command = ["npx", "--yes", "localtunnel", "--port", port, "--local-host", "127.0.0.1"]
+if subdomain:
+    command.extend(["--subdomain", subdomain])
 process = subprocess.Popen(
-    ["npx", "--yes", "localtunnel", "--port", port, "--local-host", "127.0.0.1"],
+    command,
     stdout=log,
     stderr=log,
     start_new_session=True,
