@@ -23,7 +23,7 @@ def create_topic(payload: dict[str, Any]) -> dict[str, Any]:
         "score": int(payload.get("score", 60) or 60),
         "status": "候选",
         "draft_status": "未生成",
-        "source": "local-api",
+        "source": payload.get("source", "local-api"),
         "external_id": None,
         "sync_status": "local_only",
         "created_at": timestamp,
@@ -34,5 +34,5 @@ def create_topic(payload: dict[str, Any]) -> dict[str, Any]:
     topics.append(topic)
     write_json("topics", topics)
     append_log("topic_create", f"新增选题：{topic['title']}", target=topic["topic_id"])
-    update_system_status(backend_api="enabled", database="json_api")
+    update_system_status(backend_api="enabled")
     return topic

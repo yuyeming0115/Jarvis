@@ -77,6 +77,21 @@ LOG_FIELDS = [
     "created_at",
 ]
 
+MESSAGE_FIELDS = [
+    "message_id",
+    "platform",
+    "platform_user_id",
+    "chat_id",
+    "raw_text",
+    "message_type",
+    "normalized_intent",
+    "status",
+    "error_message",
+    "received_at",
+    "processed_at",
+    "created_at",
+]
+
 _INITIALIZED = False
 
 
@@ -131,7 +146,7 @@ def _should_seed_from_json() -> bool:
 
 def seed_from_json() -> None:
     init_db()
-    for name in ["tasks", "ideas", "topics", "logs", "system-status"]:
+    for name in ["tasks", "ideas", "topics", "logs", "messages", "system-status"]:
         path = data_path(name)
         if not path.exists():
             continue
@@ -149,6 +164,8 @@ def read_json(name: str) -> Any:
         return _read_table("topics", TOPIC_FIELDS, "topic_id")
     if name == "logs":
         return _read_table("logs", LOG_FIELDS, "created_at")
+    if name == "messages":
+        return _read_messages()
     if name == "system-status":
         return _read_system_status()
     raise KeyError(f"未知数据集：{name}")
@@ -192,6 +209,18 @@ def _read_system_status() -> dict[str, Any]:
     }
 
 
+def _read_messages() -> list[dict[str, Any]]:
+    with connect() as conn:
+        rows = conn.execute("SELECT * FROM messages ORDER BY received_at").fetchall()
+    records = []
+    for row in rows:
+        item = {field: row[field] for field in MESSAGE_FIELDS}
+        item["normalized_payload"] = json.loads(row["normalized_payload_json"] or "{}")
+        item["source_event"] = json.loads(row["source_event_json"] or "{}")
+        records.append(item)
+    return records
+
+
 def _replace_payload(name: str, payload: Any) -> None:
     if name == "tasks":
         _replace_records("tasks", "task_id", TASK_FIELDS, payload, tags=True)
@@ -201,6 +230,8 @@ def _replace_payload(name: str, payload: Any) -> None:
         _replace_records("topics", "topic_id", TOPIC_FIELDS, payload, tags=False)
     elif name == "logs":
         _replace_records("logs", "log_id", LOG_FIELDS, payload, tags=False)
+    elif name == "messages":
+        _replace_messages(payload)
     elif name == "system-status":
         _replace_system_status(payload)
     else:
@@ -239,6 +270,46 @@ def _replace_system_status(payload: dict[str, Any]) -> None:
         )
 
 
+def _replace_messages(records: list[dict[str, Any]]) -> None:
+    if not isinstance(records, list):
+        raise ValueError("messages 必须是数组")
+    values = []
+    for record in records:
+        values.append(
+            [
+                record.get("message_id"),
+                record.get("platform"),
+                record.get("platform_user_id"),
+                record.get("chat_id"),
+                record.get("raw_text"),
+                record.get("message_type"),
+                record.get("normalized_intent"),
+                json.dumps(record.get("normalized_payload", {}), ensure_ascii=False),
+                json.dumps(record.get("source_event", {}), ensure_ascii=False),
+                record.get("status"),
+                record.get("error_message"),
+                record.get("received_at"),
+                record.get("processed_at"),
+                record.get("created_at"),
+            ]
+        )
+    with connect() as conn:
+        conn.execute("DELETE FROM messages")
+        if values:
+            conn.executemany(
+                """
+                INSERT INTO messages (
+                  message_id, platform, platform_user_id, chat_id, raw_text,
+                  message_type, normalized_intent, normalized_payload_json,
+                  source_event_json, status, error_message, received_at,
+                  processed_at, created_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                values,
+            )
+
+
 def backup_json(reason: str) -> Path:
     ensure_initialized()
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S-%f")
@@ -257,7 +328,7 @@ def export_json(dest: Path | None = None) -> Path:
     ensure_initialized()
     target = dest or DATA_DIR
     target.mkdir(parents=True, exist_ok=True)
-    for name in ["tasks", "ideas", "topics", "logs", "system-status"]:
+    for name in ["tasks", "ideas", "topics", "logs", "messages", "system-status"]:
         payload = read_json(name)
         path = target / f"{name}.json"
         with path.open("w", encoding="utf-8") as handle:

@@ -18,7 +18,7 @@ def create_task(payload: dict[str, Any]) -> dict[str, Any]:
         "title": payload.get("title", "").strip(),
         "description": payload.get("description", "").strip(),
         "project": payload.get("project", "Jarvis").strip() or "Jarvis",
-        "source": "local-api",
+        "source": payload.get("source", "local-api"),
         "due_at": payload.get("due_at", "").strip(),
         "priority": payload.get("priority", "P2"),
         "status": "未开始",
@@ -36,7 +36,7 @@ def create_task(payload: dict[str, Any]) -> dict[str, Any]:
     tasks.append(task)
     write_json("tasks", tasks)
     append_log("task_create", f"新增任务：{task['title']}", target=task["task_id"])
-    update_system_status(backend_api="enabled", database="json_api")
+    update_system_status(backend_api="enabled")
     return task
 
 
@@ -51,7 +51,7 @@ def patch_task(task_id: str, payload: dict[str, Any]) -> dict[str, Any]:
             task["updated_at"] = now()
             write_json("tasks", tasks)
             append_log("task_update", f"更新任务：{task.get('title', task_id)}", target=task_id)
-            update_system_status(backend_api="enabled", database="json_api")
+            update_system_status(backend_api="enabled")
             return task
     raise KeyError("任务不存在")
 
@@ -67,6 +67,6 @@ def complete_task(task_id: str) -> dict[str, Any]:
             task["updated_at"] = timestamp
             write_json("tasks", tasks)
             append_log("task_complete", f"完成任务：{task.get('title', task_id)}", target=task_id)
-            update_system_status(backend_api="enabled", database="json_api")
+            update_system_status(backend_api="enabled")
             return task
     raise KeyError("任务不存在")

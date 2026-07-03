@@ -1,6 +1,6 @@
 # Jarvis
 
-本目录是个人 Jarvis 系统的本地工作区。当前版本为 V1.2：SQLite 数据库版。
+本目录是个人 Jarvis 系统的本地工作区。当前版本为 V2.0：飞书入口准备版。
 
 ## 当前能力
 
@@ -16,6 +16,7 @@
 - 每日维护备份
 - JSON 手动备份脚本
 - 日志轮转
+- 飞书本地回调适配器和模拟测试
 
 ## 快速启动
 
@@ -59,4 +60,13 @@ bash "$HOME/Jarvis/services/uninstall-launchd.sh"
 
 ## 安全说明
 
-V1.2 不接飞书、微信、Telegram、AI 模型或真实 API Key。真实密钥只应写入本地 `.env`，不要粘贴到聊天窗口、日志或代码里。
+V2.0 只提供飞书本地回调适配器和模拟测试，暂不配置真实飞书密钥，不接微信、Telegram 或 AI 模型。真实密钥只应写入本地 `.env`，不要粘贴到聊天窗口、日志或代码里。
+
+## 飞书本地模拟
+
+```bash
+bash "$HOME/Jarvis/services/simulate-feishu-event.sh" challenge
+bash "$HOME/Jarvis/services/simulate-feishu-event.sh" task
+```
+
+真实飞书接入需要安全 HTTPS 回调地址，不能直接把本机 `127.0.0.1:8080` 暴露公网。

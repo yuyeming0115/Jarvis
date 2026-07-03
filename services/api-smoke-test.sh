@@ -12,6 +12,7 @@ curl -fsS "$BASE_URL/api/system-status" | python3 -m json.tool >/dev/null
 curl -fsS "$BASE_URL/api/tasks" | python3 -m json.tool >/dev/null
 curl -fsS "$BASE_URL/api/ideas" | python3 -m json.tool >/dev/null
 curl -fsS "$BASE_URL/api/topics" | python3 -m json.tool >/dev/null
+curl -fsS "$BASE_URL/api/messages" | python3 -m json.tool >/dev/null
 curl -fsS "$BASE_URL/api/logs" | python3 -m json.tool >/dev/null
 
 echo "Read-only API checks passed."

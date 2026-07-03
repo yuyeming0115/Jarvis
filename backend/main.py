@@ -16,9 +16,11 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from backend.core.ideas import create_idea, list_ideas
+from backend.core.messages import list_messages
 from backend.core.store import append_log, ensure_initialized, read_json, update_system_status
 from backend.core.tasks import complete_task, create_task, list_tasks, patch_task
 from backend.core.topics import create_topic, list_topics
+from adapters.feishu.feishu_adapter import handle_feishu_event
 from backend.gateway.inbox import handle_inbox
 
 
@@ -29,7 +31,7 @@ class ApiError(Exception):
 
 
 class JarvisHandler(BaseHTTPRequestHandler):
-    server_version = "JarvisWorkbench/1.2"
+    server_version = "JarvisWorkbench/2.0"
 
     def log_message(self, fmt: str, *args: object) -> None:
         return
@@ -61,6 +63,7 @@ class JarvisHandler(BaseHTTPRequestHandler):
             "/api/tasks": list_tasks,
             "/api/ideas": list_ideas,
             "/api/topics": list_topics,
+            "/api/messages": list_messages,
             "/api/system-status": lambda: read_json("system-status"),
             "/api/logs": lambda: read_json("logs"),
         }
@@ -82,6 +85,8 @@ class JarvisHandler(BaseHTTPRequestHandler):
             result = create_topic(payload)
         elif method == "POST" and path == "/api/inbox":
             result = handle_inbox(payload)
+        elif method == "POST" and path == "/api/feishu/event":
+            result = handle_feishu_event(payload, dict(self.headers.items()))
         elif method == "POST" and path.startswith("/api/tasks/") and path.endswith("/complete"):
             task_id = path.split("/")[3]
             result = complete_task(task_id)
@@ -91,7 +96,8 @@ class JarvisHandler(BaseHTTPRequestHandler):
         else:
             raise ApiError("接口不存在", HTTPStatus.NOT_FOUND)
 
-        self.send_json(result, HTTPStatus.CREATED if method == "POST" else HTTPStatus.OK)
+        status = HTTPStatus.OK if path == "/api/feishu/event" else HTTPStatus.CREATED if method == "POST" else HTTPStatus.OK
+        self.send_json(result, status)
 
     def read_payload(self) -> dict:
         length = int(self.headers.get("Content-Length", "0"))

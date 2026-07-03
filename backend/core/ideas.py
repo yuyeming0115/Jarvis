@@ -20,7 +20,7 @@ def create_idea(payload: dict[str, Any]) -> dict[str, Any]:
         "tags": payload.get("tags", []),
         "status": "已记录",
         "ai_summary": payload.get("ai_summary", "").strip() or "V1.1 本地记录，暂未启用 AI 摘要。",
-        "source": "local-api",
+        "source": payload.get("source", "local-api"),
         "external_id": None,
         "sync_status": "local_only",
         "created_at": timestamp,
@@ -31,5 +31,5 @@ def create_idea(payload: dict[str, Any]) -> dict[str, Any]:
     ideas.append(idea)
     write_json("ideas", ideas)
     append_log("idea_create", "新增灵感记录", target=idea["idea_id"])
-    update_system_status(backend_api="enabled", database="json_api")
+    update_system_status(backend_api="enabled")
     return idea

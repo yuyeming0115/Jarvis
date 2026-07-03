@@ -64,6 +64,23 @@ CREATE TABLE IF NOT EXISTS logs (
   created_at TEXT
 );
 
+CREATE TABLE IF NOT EXISTS messages (
+  message_id TEXT PRIMARY KEY,
+  platform TEXT,
+  platform_user_id TEXT,
+  chat_id TEXT,
+  raw_text TEXT NOT NULL,
+  message_type TEXT,
+  normalized_intent TEXT,
+  normalized_payload_json TEXT NOT NULL DEFAULT '{}',
+  source_event_json TEXT NOT NULL DEFAULT '{}',
+  status TEXT,
+  error_message TEXT,
+  received_at TEXT,
+  processed_at TEXT,
+  created_at TEXT
+);
+
 CREATE TABLE IF NOT EXISTS system_status (
   id INTEGER PRIMARY KEY CHECK (id = 1),
   payload_json TEXT NOT NULL
@@ -72,3 +89,6 @@ CREATE TABLE IF NOT EXISTS system_status (
 CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
 CREATE INDEX IF NOT EXISTS idx_tasks_due_at ON tasks(due_at);
 CREATE INDEX IF NOT EXISTS idx_logs_created_at ON logs(created_at);
+
+CREATE INDEX IF NOT EXISTS idx_messages_platform ON messages(platform);
+CREATE INDEX IF NOT EXISTS idx_messages_received_at ON messages(received_at);
