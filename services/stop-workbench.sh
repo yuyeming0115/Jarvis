@@ -4,6 +4,14 @@ set -euo pipefail
 PORT="${JARVIS_WORKBENCH_PORT:-8080}"
 LOG_DIR="$HOME/Jarvis/logs"
 PID_FILE="$LOG_DIR/workbench.pid"
+LAUNCHD_LABEL="com.local.jarvis.workbench"
+
+if launchctl print "gui/$UID/$LAUNCHD_LABEL" >/dev/null 2>&1; then
+  echo "Jarvis workbench is managed by launchd: $LAUNCHD_LABEL"
+  echo "Use this to remove the LaunchAgent:"
+  echo "  bash $HOME/Jarvis/services/uninstall-launchd.sh"
+  exit 0
+fi
 
 if [ ! -f "$PID_FILE" ]; then
   PID="$(lsof -ti tcp:"$PORT" || true)"

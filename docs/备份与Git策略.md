@@ -6,6 +6,7 @@ V1.2 已支持三种备份：
 
 - 手动 JSON 导出：运行 `bash "$HOME/Jarvis/services/export-json.sh"`
 - 手动 SQLite 备份：运行 `bash "$HOME/Jarvis/services/backup-db.sh"`
+- 每日维护备份：launchd 每天 03:15 运行 `bash "$HOME/Jarvis/services/run-maintenance.sh"`
 - 自动备份：每次通过本地 API 写入前，复制 SQLite，并导出 JSON 快照到 `backups/auto-data-*`
 
 这意味着误操作后，可以优先恢复 SQLite；必要时也可以从 JSON 快照恢复单条数据。
@@ -23,5 +24,5 @@ V1.2 已支持三种备份：
 
 ## 后续增强
 
-- V1.3 增加定时备份和日志轮转。
+- V1.3 已增加定时备份和日志轮转。
 - 如接入 NAS，可以把 `backups/` 同步到 NAS 或 Time Machine。

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>com.local.jarvis.workbench</string>
+
+    <key>ProgramArguments</key>
+    <array>
+      <string>/bin/bash</string>
+      <string>/Users/zoe/Jarvis/services/run-workbench.sh</string>
+    </array>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+      <key>JARVIS_WORKBENCH_PORT</key>
+      <string>8080</string>
+    </dict>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/zoe/Jarvis</string>
+
+    <key>StandardOutPath</key>
+    <string>/Users/zoe/Jarvis/logs/workbench.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/zoe/Jarvis/logs/workbench.err.log</string>
+  </dict>
+</plist>

@@ -1,21 +1,28 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DB="$HOME/Jarvis/backend/db/jarvis.sqlite3"
 DEST="$HOME/Jarvis/backups/db-$(date +%Y%m%d-%H%M%S)"
 
-if [ ! -f "$DB" ]; then
-  echo "SQLite database not found: $DB"
-  echo "Run: bash $HOME/Jarvis/services/init-sqlite.sh"
-  exit 1
-fi
+cd "$HOME/Jarvis"
+DEST="$DEST" python3 - <<'PY'
+import os
+import sqlite3
+from pathlib import Path
 
-mkdir -p "$DEST"
-cp "$DB" "$DEST/"
-for suffix in "-wal" "-shm"; do
-  if [ -f "$DB$suffix" ]; then
-    cp "$DB$suffix" "$DEST/"
-  fi
-done
+from backend.core.store import DB_PATH, ensure_initialized
 
-echo "SQLite backup created: $DEST"
+ensure_initialized()
+dest = Path(os.environ["DEST"])
+dest.mkdir(parents=True, exist_ok=True)
+backup_path = dest / DB_PATH.name
+
+source = sqlite3.connect(DB_PATH)
+target = sqlite3.connect(backup_path)
+try:
+    source.backup(target)
+finally:
+    target.close()
+    source.close()
+
+print(f"SQLite backup created: {dest}")
+PY
