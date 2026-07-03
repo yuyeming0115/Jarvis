@@ -70,3 +70,12 @@ bash "$HOME/Jarvis/services/simulate-feishu-event.sh" task
 ```
 
 真实飞书接入需要安全 HTTPS 回调地址，不能直接把本机 `127.0.0.1:8080` 暴露公网。
+
+临时回调测试：
+
+```bash
+bash "$HOME/Jarvis/services/start-feishu-tunnel.sh"
+bash "$HOME/Jarvis/services/show-feishu-callback-url.sh"
+```
+
+飞书 Verification Token 写入 `$HOME/Jarvis/.env` 后，launchd 启动的 Jarvis 会自动读取。

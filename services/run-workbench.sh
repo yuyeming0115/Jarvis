@@ -14,5 +14,12 @@ fi
 mkdir -p "$LOG_DIR"
 echo "$$" > "$PID_FILE"
 
+if [ -f "$HOME/Jarvis/.env" ]; then
+  set -a
+  # shellcheck disable=SC1091
+  source "$HOME/Jarvis/.env"
+  set +a
+fi
+
 export JARVIS_WORKBENCH_PORT="$PORT"
 exec python3 "$BACKEND_ENTRY"

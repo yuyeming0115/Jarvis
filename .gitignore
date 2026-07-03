@@ -2,6 +2,7 @@
 apps/workbench/data/*.json
 backend/db/*.sqlite3
 backend/db/*.sqlite3-*
+config/local/
 logs/*.log
 logs/*.pid
 backups/*

@@ -19,6 +19,13 @@ fi
 
 mkdir -p "$LOG_DIR"
 
+if [ -f "$HOME/Jarvis/.env" ]; then
+  set -a
+  # shellcheck disable=SC1091
+  source "$HOME/Jarvis/.env"
+  set +a
+fi
+
 if [ -f "$PID_FILE" ]; then
   OLD_PID="$(cat "$PID_FILE")"
   if [ -n "$OLD_PID" ] && kill -0 "$OLD_PID" 2>/dev/null; then
