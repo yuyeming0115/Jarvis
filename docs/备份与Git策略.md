@@ -2,12 +2,13 @@
 
 ## 当前备份方式
 
-V1.1 已支持两种 JSON 备份：
+V1.2 已支持三种备份：
 
-- 手动备份：运行 `bash "$HOME/Jarvis/services/backup-json.sh"`
-- 自动备份：每次通过本地 API 写入前，复制 `apps/workbench/data/*.json` 到 `backups/auto-json-*`
+- 手动 JSON 导出：运行 `bash "$HOME/Jarvis/services/export-json.sh"`
+- 手动 SQLite 备份：运行 `bash "$HOME/Jarvis/services/backup-db.sh"`
+- 自动备份：每次通过本地 API 写入前，复制 SQLite，并导出 JSON 快照到 `backups/auto-data-*`
 
-这意味着误操作后，可以从最近的备份目录里恢复单个 JSON 文件。
+这意味着误操作后，可以优先恢复 SQLite；必要时也可以从 JSON 快照恢复单条数据。
 
 ## 是否需要 GitHub
 
@@ -22,6 +23,5 @@ V1.1 已支持两种 JSON 备份：
 
 ## 后续增强
 
-- V1.2 使用 SQLite 后增加数据库备份脚本。
 - V1.3 增加定时备份和日志轮转。
 - 如接入 NAS，可以把 `backups/` 同步到 NAS 或 Time Machine。

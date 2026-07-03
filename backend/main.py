@@ -16,7 +16,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from backend.core.ideas import create_idea, list_ideas
-from backend.core.store import append_log, read_json, update_system_status
+from backend.core.store import append_log, ensure_initialized, read_json, update_system_status
 from backend.core.tasks import complete_task, create_task, list_tasks, patch_task
 from backend.core.topics import create_topic, list_topics
 from backend.gateway.inbox import handle_inbox
@@ -29,7 +29,7 @@ class ApiError(Exception):
 
 
 class JarvisHandler(BaseHTTPRequestHandler):
-    server_version = "JarvisWorkbench/1.1"
+    server_version = "JarvisWorkbench/1.2"
 
     def log_message(self, fmt: str, *args: object) -> None:
         return
@@ -149,7 +149,8 @@ class JarvisHandler(BaseHTTPRequestHandler):
 
 def main() -> None:
     port = int(os.environ.get("JARVIS_WORKBENCH_PORT", "8080"))
-    update_system_status(workbench="online", backend_api="enabled", database="json_api", public_access=False)
+    ensure_initialized()
+    update_system_status(workbench="online", backend_api="enabled", database="sqlite", public_access=False)
     server = ThreadingHTTPServer(("127.0.0.1", port), JarvisHandler)
     print(f"Jarvis workbench API listening on http://127.0.0.1:{port}/", flush=True)
     server.serve_forever()

@@ -1,6 +1,6 @@
 # Backend
 
-V1.1 使用 Python 标准库实现本地 API，不需要安装外部依赖。
+V1.2 使用 Python 标准库实现本地 API 和 SQLite 数据层，不需要安装外部依赖。
 
 默认监听：
 

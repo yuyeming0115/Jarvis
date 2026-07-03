@@ -16,6 +16,16 @@ curl -fsS "$BASE_URL/api/logs" | python3 -m json.tool >/dev/null
 
 echo "Read-only API checks passed."
 
+DATABASE="$(
+  curl -fsS "$BASE_URL/api/system-status" | python3 -c '
+import json
+import sys
+
+print(json.load(sys.stdin).get("database", "unknown"))
+'
+)"
+echo "Current database mode: $DATABASE"
+
 if [ "$MODE" != "--write" ]; then
   echo "Skipped write test. Run with --write to create and complete a test task."
   exit 0

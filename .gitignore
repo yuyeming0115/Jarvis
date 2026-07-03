@@ -1,6 +1,7 @@
 .env
 apps/workbench/data/*.json
 backend/db/*.sqlite3
+backend/db/*.sqlite3-*
 logs/*.log
 logs/*.pid
 backups/*
