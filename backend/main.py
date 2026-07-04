@@ -172,10 +172,26 @@ class JarvisHandler(BaseHTTPRequestHandler):
 def main() -> None:
     port = int(os.environ.get("JARVIS_WORKBENCH_PORT", "8080"))
     ensure_initialized()
-    update_system_status(workbench="online", backend_api="enabled", database="sqlite", public_access=False)
+    update_system_status(workbench="online", backend_api="enabled", database="sqlite", public_access=False, telegram="not_configured")
+
+    try:
+        from adapters.telegram.telegram_adapter import start_telegram_bot
+        if start_telegram_bot():
+            print("Telegram bot started", flush=True)
+    except Exception as error:
+        print(f"Telegram bot not started: {error}", flush=True)
+
     server = ThreadingHTTPServer(("127.0.0.1", port), JarvisHandler)
     print(f"Jarvis workbench API listening on http://127.0.0.1:{port}/", flush=True)
-    server.serve_forever()
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        try:
+            from adapters.telegram.telegram_adapter import stop_telegram_bot
+            stop_telegram_bot()
+        except Exception:
+            pass
+        raise
 
 
 if __name__ == "__main__":
