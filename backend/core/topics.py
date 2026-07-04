@@ -9,6 +9,13 @@ def list_topics() -> list[dict[str, Any]]:
     return read_json("topics")
 
 
+def get_topic(topic_id: str) -> dict[str, Any] | None:
+    for topic in list_topics():
+        if topic.get("topic_id") == topic_id:
+            return topic
+    return None
+
+
 def create_topic(payload: dict[str, Any]) -> dict[str, Any]:
     backup_json("create-topic")
     topics = list_topics()

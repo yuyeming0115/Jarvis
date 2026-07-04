@@ -152,19 +152,92 @@ def search_wiki(query: str, limit: int = 20) -> list[dict[str, Any]]:
 
 
 def archive_draft_to_wiki(draft_id: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-    from .drafts import get_draft
+    """
+    将批准的草稿归档到 wiki
+    
+    只有 status = '定稿' 或 review_status = 'approved' 的草稿可以归档
+    
+    Args:
+        draft_id: 草稿 ID
+        payload: 可选，包含 wiki 页面元数据
+        
+    Returns:
+        dict: 创建的 wiki 页面信息
+        
+    Raises:
+        KeyError: 草稿不存在
+        ValueError: 草稿未批准，不能归档
+    """
+    from .drafts import get_draft, patch_draft
     draft = get_draft(draft_id)
     if not draft:
         raise KeyError("草稿不存在")
+    
+    # 检查草稿是否批准
+    draft_status = draft.get("status", "")
+    review_status = draft.get("review_status", "")
+    if draft_status != "定稿" and review_status != "approved":
+        raise ValueError(f"只有批准的草稿可以归档。当前状态：{draft_status}, 审核状态：{review_status}")
+    
+    # 生成归档文件路径
+    from pathlib import Path
+    from .store import ROOT as _ROOT
+    archive_dir = _ROOT / "wiki" / "pages" / "content"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    
+    timestamp = now()
+    date_str = timestamp[:10]  # YYYY-MM-DD
+    archive_filename = f"{date_str}-{draft_id}.md"
+    archive_path = archive_dir / archive_filename
+    
+    # 生成带 frontmatter 的 Markdown 内容
+    content = draft.get("content", "")
+    frontmatter = f"""---
+draft_id: {draft_id}
+title: {draft.get('title', '')}
+channel: {draft.get('channel', draft.get('platform', ''))}
+content_type: {draft.get('content_type', '')}
+status: {draft_status}
+archived_at: {timestamp}
+prompt_version: {draft.get('prompt_version', '')}
+model_name: {draft.get('model_name', '')}
+generation_mode: {draft.get('generation_mode', '')}
+---
+
+# {draft.get('title', '')}
+
+{content}
+"""
+    
+    # 保存 Markdown 文件
+    archive_path.write_text(frontmatter, encoding='utf-8')
+    
+    # 创建 wiki 页面记录
     wiki_payload = {
         "title": draft["title"],
-        "content_md": draft.get("content", ""),
-        "summary": f"从草稿归档：{draft['platform']} / {draft['content_type']}",
+        "content_md": content,
+        "summary": f"从草稿归档：{draft.get('platform', '')} / {draft.get('content_type', '')}",
         "tags": ["草稿归档", draft.get("platform", "")],
-        "status": "草稿",
+        "status": "已发布",
         "source_type": "draft",
         "source_id": draft_id,
     }
     if payload:
         wiki_payload.update({k: v for k, v in payload.items() if v is not None})
-    return create_wiki_page(wiki_payload)
+    
+    wiki_page = create_wiki_page(wiki_payload)
+    
+    # 更新草稿状态为 archived
+    patch_draft(draft_id, {
+        "status": "已归档",
+        "archived_at": timestamp,
+        "output_metadata_json": json.dumps({
+            "archive_path": str(archive_path),
+            "wiki_page_id": wiki_page["page_id"],
+            "wiki_slug": wiki_page["slug"]
+        }, ensure_ascii=False)
+    })
+    
+    append_log("draft_archive", f"归档草稿：{draft.get('title', draft_id)} -> {archive_path}", target=draft_id)
+    
+    return wiki_page
