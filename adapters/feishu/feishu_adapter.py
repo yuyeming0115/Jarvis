@@ -8,6 +8,13 @@ from backend.core.messages import create_message
 from backend.core.reminders import parse_due_at_from_text
 from backend.core.store import append_log, backup_json, now, update_system_status
 from backend.gateway.inbox import route_normalized_message
+from adapters.feishu.feishu_cards import (
+    build_idea_confirmation_card,
+    build_task_confirmation_card,
+    build_topic_confirmation_card,
+)
+from adapters.feishu.feishu_card_actions import handle_card_action
+from adapters.feishu.feishu_client import is_configured, send_card_message
 
 
 class FeishuAdapterError(Exception):
@@ -17,7 +24,10 @@ class FeishuAdapterError(Exception):
 def handle_feishu_event(payload: dict[str, Any], headers: dict[str, str] | None = None) -> dict[str, Any]:
     headers = headers or {}
     if "encrypt" in payload:
-        raise FeishuAdapterError("V2.0 暂不处理加密事件；请先不要在飞书事件订阅中配置 Encrypt Key。")
+        raise FeishuAdapterError("V2.2 暂不处理加密事件；请先不要在飞书事件订阅中配置 Encrypt Key。")
+
+    if _is_card_action(payload):
+        return handle_card_action(payload, headers)
 
     if _is_url_verification(payload):
         _verify_token(payload)
@@ -57,7 +67,40 @@ def handle_feishu_event(payload: dict[str, Any], headers: dict[str, str] | None 
         target=message["message_id"],
     )
     update_system_status(feishu="local_callback_ready")
+
+    _send_confirmation_card(normalized, record)
+
     return {"status": "processed", "message": message, "record": record}
+
+
+def _send_confirmation_card(normalized: dict[str, Any], record: dict[str, Any]) -> None:
+    if not is_configured():
+        return
+    chat_id = normalized.get("chat_id", "")
+    intent = normalized["normalized"].get("intent", "")
+    if not chat_id:
+        return
+
+    try:
+        if intent == "task":
+            card = build_task_confirmation_card(record, normalized["normalized"])
+        elif intent == "topic":
+            card = build_topic_confirmation_card(record)
+        else:
+            card = build_idea_confirmation_card(record)
+        send_card_message(chat_id, card)
+    except Exception as error:
+        append_log(
+            "feishu_card_send_failed",
+            f"发送飞书确认卡片失败：{error}",
+            source="feishu",
+            status="failed",
+            target="feishu_adapter",
+        )
+
+
+def _is_card_action(payload: dict[str, Any]) -> bool:
+    return payload.get("type") == "card.action.trigger" or "action" in payload and "value" in payload.get("action", {})
 
 
 def _is_url_verification(payload: dict[str, Any]) -> bool:
