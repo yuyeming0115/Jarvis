@@ -9,7 +9,23 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
-ROOT = Path.home() / "Jarvis"
+
+def _detect_root() -> Path:
+    env_root = os.environ.get("JARVIS_ROOT")
+    if env_root:
+        return Path(env_root).resolve()
+
+    current = Path(__file__).resolve()
+    for parent in [current, *current.parents]:
+        if (parent / "apps" / "workbench").is_dir() and (parent / "backend").is_dir():
+            return parent
+        if parent.name == "Jarvis" and (parent / "apps").is_dir():
+            return parent
+
+    return Path.home() / "Jarvis"
+
+
+ROOT = _detect_root()
 STATIC_DIR = ROOT / "apps" / "workbench"
 BACKEND_DIR = ROOT / "backend"
 if str(ROOT) not in sys.path:

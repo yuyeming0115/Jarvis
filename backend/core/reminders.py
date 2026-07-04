@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import argparse
+import platform
 import re
 import subprocess
+import sys
 import time
 from datetime import datetime, timedelta
 from typing import Any
@@ -104,23 +106,48 @@ def mark_notified(task_id: str, due_at: str, channel: str = "macos") -> None:
         )
 
 
-def send_macos_notification(task: dict[str, Any]) -> None:
+def send_notification(task: dict[str, Any]) -> None:
     title = "Jarvis 提醒"
     due_at = task.get("due_at") or ""
     body = f"{task.get('title', '未命名任务')}\n到期时间：{due_at}"
-    script = """
+    system = platform.system()
+
+    if system == "Darwin":
+        script = """
 on run argv
   display notification (item 2 of argv) with title (item 1 of argv) sound name "Glass"
 end run
 """
-    subprocess.run(["osascript", "-e", script, title, body], check=True)
+        subprocess.run(["osascript", "-e", script, title, body], check=True)
+    elif system == "Windows":
+        try:
+            import winrt.windows.ui.notifications as notifications
+            import winrt.windows.data.xml.dom as dom
+            nManager = notifications.ToastNotificationManager
+            notifier = nManager.create_toast_notifier()
+            template = """
+<toast>
+  <visual>
+    <binding template='ToastGeneric'>
+      <text>{title}</text>
+      <text>{body}</text>
+    </binding>
+  </visual>
+</toast>""".format(title=title, body=body.replace("\n", " - "))
+            xDoc = dom.XmlDocument()
+            xDoc.load_xml(template)
+            notifier.show(notifications.ToastNotification(xDoc))
+        except Exception:
+            print(f"[REMINDER] {title}: {body}", file=sys.stderr)
+    else:
+        print(f"[REMINDER] {title}: {body}", file=sys.stderr)
 
 
 def process_due_reminders(dry_run: bool = False) -> list[dict[str, Any]]:
     due_tasks = get_due_tasks()
     for task in due_tasks:
         if not dry_run:
-            send_macos_notification(task)
+            send_notification(task)
             mark_notified(task["task_id"], task.get("due_at", ""))
         append_log(
             "reminder_sent" if not dry_run else "reminder_due",

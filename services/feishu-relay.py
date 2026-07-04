@@ -4,13 +4,32 @@ import http.client
 import json
 import os
 import secrets
+import sys
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
 
-ROOT = Path.home() / "Jarvis"
+def _detect_root() -> Path:
+    env_root = os.environ.get("JARVIS_ROOT")
+    if env_root:
+        return Path(env_root).resolve()
+
+    current = Path(__file__).resolve()
+    for parent in [current, *current.parents]:
+        if (parent / "apps" / "workbench").is_dir() and (parent / "backend").is_dir():
+            return parent
+        if parent.name == "Jarvis" and (parent / "apps").is_dir():
+            return parent
+
+    return Path.home() / "Jarvis"
+
+
+ROOT = _detect_root()
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 LOCAL_CONFIG_DIR = ROOT / "config" / "local"
 TOKEN_FILE = LOCAL_CONFIG_DIR / "feishu-callback-token"
 JARVIS_PORT = int(os.environ.get("JARVIS_WORKBENCH_PORT", "8080"))

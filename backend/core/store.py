@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import sqlite3
 import uuid
@@ -9,7 +10,22 @@ from pathlib import Path
 from typing import Any
 
 
-ROOT = Path.home() / "Jarvis"
+def _detect_root() -> Path:
+    env_root = os.environ.get("JARVIS_ROOT")
+    if env_root:
+        return Path(env_root).resolve()
+
+    current = Path(__file__).resolve()
+    for parent in [current, *current.parents]:
+        if (parent / "apps" / "workbench").is_dir() and (parent / "backend").is_dir():
+            return parent
+        if parent.name == "Jarvis" and (parent / "apps").is_dir():
+            return parent
+
+    return Path.home() / "Jarvis"
+
+
+ROOT = _detect_root()
 DATA_DIR = ROOT / "apps" / "workbench" / "data"
 BACKUP_DIR = ROOT / "backups"
 DB_DIR = ROOT / "backend" / "db"
