@@ -142,7 +142,14 @@ def _normalize_feishu_payload(payload: dict[str, Any], text: str) -> dict[str, A
     sender = event.get("sender", {})
     sender_id = sender.get("sender_id", {}) if isinstance(sender, dict) else {}
 
-    normalized = _classify_text(text)
+    from backend.gateway.inbox import classify_text as gateway_classify
+    classification = gateway_classify(text)
+    due_at = classification.get("due_at") or parse_due_at_from_text(text)
+    normalized = {
+        "intent": classification.get("intent", "idea"),
+        "title": classification.get("title", text[:50]),
+        "due_at": due_at,
+    }
     return {
         "message_id": message.get("message_id") or header.get("event_id") or f"feishu_{now().replace(' ', '_')}",
         "platform": "feishu",
@@ -152,15 +159,5 @@ def _normalize_feishu_payload(payload: dict[str, Any], text: str) -> dict[str, A
         "message_type": message.get("message_type", "text"),
         "received_at": now(),
         "normalized": normalized,
-        "status": "processed",
+        "status": "processed" if normalized["intent"] != "confirm" else "needs_confirmation",
     }
-
-
-def _classify_text(text: str) -> dict[str, Any]:
-    intent = "idea"
-    due_at = parse_due_at_from_text(text)
-    if due_at or any(word in text for word in ["提醒", "截止", "到期", "明天", "后天", "周", "星期", "今天", "今晚", "明早"]):
-        intent = "task"
-    if any(word in text for word in ["选题", "写一篇", "公众号", "小红书", "视频号"]):
-        intent = "topic"
-    return {"intent": intent, "title": text, "due_at": due_at}
