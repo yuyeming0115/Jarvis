@@ -101,3 +101,64 @@ CREATE INDEX IF NOT EXISTS idx_logs_created_at ON logs(created_at);
 CREATE INDEX IF NOT EXISTS idx_messages_platform ON messages(platform);
 CREATE INDEX IF NOT EXISTS idx_messages_received_at ON messages(received_at);
 CREATE INDEX IF NOT EXISTS idx_reminder_notifications_status ON reminder_notifications(status);
+
+CREATE TABLE IF NOT EXISTS drafts (
+  draft_id TEXT PRIMARY KEY,
+  topic_id TEXT,
+  idea_id TEXT,
+  title TEXT NOT NULL,
+  platform TEXT,
+  content_type TEXT,
+  outline_json TEXT NOT NULL DEFAULT '[]',
+  content TEXT,
+  word_count INTEGER DEFAULT 0,
+  status TEXT,
+  ai_model TEXT,
+  generation_params_json TEXT NOT NULL DEFAULT '{}',
+  source TEXT,
+  deleted_at TEXT,
+  created_at TEXT,
+  updated_at TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_drafts_status ON drafts(status);
+CREATE INDEX IF NOT EXISTS idx_drafts_topic_id ON drafts(topic_id);
+
+CREATE TABLE IF NOT EXISTS wiki_pages (
+  page_id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  slug TEXT NOT NULL UNIQUE,
+  content_md TEXT NOT NULL DEFAULT '',
+  summary TEXT,
+  tags_json TEXT NOT NULL DEFAULT '[]',
+  source_type TEXT,
+  source_id TEXT,
+  word_count INTEGER DEFAULT 0,
+  status TEXT,
+  deleted_at TEXT,
+  created_at TEXT,
+  updated_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS media_prompts (
+  prompt_id TEXT PRIMARY KEY,
+  draft_id TEXT,
+  topic_id TEXT,
+  title TEXT NOT NULL,
+  prompt_type TEXT NOT NULL,
+  platform TEXT,
+  prompts_json TEXT NOT NULL DEFAULT '[]',
+  style_reference TEXT,
+  music_suggestion TEXT,
+  ai_model TEXT,
+  status TEXT,
+  deleted_at TEXT,
+  created_at TEXT,
+  updated_at TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_wiki_slug ON wiki_pages(slug);
+CREATE INDEX IF NOT EXISTS idx_wiki_status ON wiki_pages(status);
+CREATE INDEX IF NOT EXISTS idx_wiki_tags ON wiki_pages(tags_json);
+CREATE INDEX IF NOT EXISTS idx_media_prompts_draft_id ON media_prompts(draft_id);
+CREATE INDEX IF NOT EXISTS idx_media_prompts_type ON media_prompts(prompt_type);
