@@ -504,6 +504,16 @@ button.primary-btn {
   margin: 8px 0;
 }
 
+.preview-content img {
+  display: block;
+  width: 100%;
+  max-width: 720px;
+  height: auto;
+  margin: 18px auto;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.10);
+}
+
 .preview-content ul {
   margin: 8px 0;
   padding-left: 24px;
@@ -633,6 +643,16 @@ button.primary-btn {
   max-height: none;
   overflow: visible;
   white-space: normal;
+}
+
+.content-preview.formatted img {
+  display: block;
+  width: 100%;
+  max-width: 720px;
+  height: auto;
+  margin: 16px auto;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.10);
 }
 
 /* Draft list item - compact layout */

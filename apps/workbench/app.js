@@ -918,6 +918,7 @@ function renderMarkdownToHtml(md) {
   function renderInline(text) {
     if (!text) return "";
     text = escapeHtml(text);
+    text = text.replace(/!\[(.*?)\]\((.+?)\)/g, '<img src="$2" alt="$1" loading="lazy">');
     text = text.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
     text = text.replace(/\*(.+?)\*/g, "<em>$1</em>");
     text = text.replace(/`(.+?)`/g, "<code>$1</code>");
