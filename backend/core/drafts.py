@@ -52,6 +52,11 @@ def create_draft(payload: dict[str, Any]) -> dict[str, Any]:
             outline = []
     content = payload.get("content", "")
     status = payload.get("status", "大纲")
+    word_count = int(payload.get("word_count") or len(content))
+    channel = payload.get("channel", platform)
+    body = payload.get("body", content)
+    generation_mode = payload.get("generation_mode", "template")
+    model_name = payload.get("model_name", payload.get("ai_model", ""))
 
     if not title:
         raise ValueError("草稿标题不能为空")
@@ -62,8 +67,11 @@ def create_draft(payload: dict[str, Any]) -> dict[str, Any]:
             INSERT INTO drafts (
                 draft_id, topic_id, idea_id, title, platform, content_type,
                 outline_json, content, word_count, status, ai_model,
-                generation_params_json, source, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                generation_params_json, source, source_message_id, channel, body,
+                summary, review_status, prompt_version, model_name, generation_mode,
+                input_context_json, output_metadata_json, review_notes,
+                rejection_reason, approved_at, archived_at, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 draft_id,
@@ -74,11 +82,25 @@ def create_draft(payload: dict[str, Any]) -> dict[str, Any]:
                 content_type,
                 json.dumps(outline, ensure_ascii=False),
                 content,
-                len(content),
+                word_count,
                 status,
                 payload.get("ai_model", ""),
                 json.dumps(payload.get("generation_params", {}), ensure_ascii=False),
                 payload.get("source", "local-api"),
+                payload.get("source_message_id"),
+                channel,
+                body,
+                payload.get("summary"),
+                payload.get("review_status", "pending"),
+                payload.get("prompt_version"),
+                model_name,
+                generation_mode,
+                payload.get("input_context_json"),
+                payload.get("output_metadata_json"),
+                payload.get("review_notes"),
+                payload.get("rejection_reason"),
+                payload.get("approved_at"),
+                payload.get("archived_at"),
                 timestamp,
                 timestamp,
             ),
@@ -226,6 +248,8 @@ def generate_draft_from_topic(topic_id: str, payload: dict[str, Any]) -> dict[st
     
     # 6. 记录生成日志
     append_log("draft_generate", f"从选题生成草稿：{draft['title']}", target=draft["draft_id"])
+    from .topics import patch_topic
+    patch_topic(topic_id, {"draft_status": "已生成"})
     
     return draft
 

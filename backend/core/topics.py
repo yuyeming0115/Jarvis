@@ -59,3 +59,15 @@ def patch_topic(topic_id: str, payload: dict[str, Any]) -> dict[str, Any]:
             update_system_status(backend_api="enabled")
             return topic
     raise KeyError("选题不存在")
+
+
+def delete_topic(topic_id: str) -> bool:
+    backup_json("delete-topic")
+    topics = list_topics()
+    remaining = [topic for topic in topics if topic.get("topic_id") != topic_id]
+    if len(remaining) == len(topics):
+        raise KeyError("选题不存在")
+    write_json("topics", remaining)
+    append_log("topic_delete", f"删除选题：{topic_id}", target=topic_id)
+    update_system_status(backend_api="enabled")
+    return True

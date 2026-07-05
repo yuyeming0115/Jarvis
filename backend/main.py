@@ -35,7 +35,7 @@ from backend.core.ideas import create_idea, list_ideas
 from backend.core.messages import list_messages
 from backend.core.store import append_log, ensure_initialized, read_json, update_system_status
 from backend.core.tasks import complete_task, create_task, list_tasks, patch_task
-from backend.core.topics import create_topic, list_topics
+from backend.core.topics import create_topic, delete_topic, list_topics, patch_topic
 from backend.core.drafts import (
     approve_draft,
     create_draft,
@@ -242,6 +242,13 @@ class JarvisHandler(BaseHTTPRequestHandler):
             result = self._handle_ai_convert_idea(payload)
         elif method == "POST" and path == "/api/topics":
             result = create_topic(payload)
+        elif method == "DELETE" and path.startswith("/api/topics/"):
+            topic_id = path.split("/")[3]
+            delete_topic(topic_id)
+            result = {"deleted": True}
+        elif method == "PATCH" and path.startswith("/api/topics/"):
+            topic_id = path.split("/")[3]
+            result = patch_topic(topic_id, payload)
         elif method == "POST" and path == "/api/inbox":
             result = handle_inbox(payload)
         elif method == "POST" and path == "/api/feishu/event":

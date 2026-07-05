@@ -137,6 +137,123 @@ def init_db() -> None:
     DB_DIR.mkdir(parents=True, exist_ok=True)
     with connect() as conn:
         conn.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
+        _apply_schema_upgrades(conn)
+
+
+def _table_columns(conn: sqlite3.Connection, table_name: str) -> set[str]:
+    rows = conn.execute(f"PRAGMA table_info({table_name})").fetchall()
+    return {row["name"] for row in rows}
+
+
+def _add_column_if_missing(
+    conn: sqlite3.Connection,
+    table_name: str,
+    column_name: str,
+    definition: str,
+) -> None:
+    if column_name not in _table_columns(conn, table_name):
+        conn.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {definition}")
+
+
+def _apply_schema_upgrades(conn: sqlite3.Connection) -> None:
+    """Keep existing SQLite databases compatible with the latest app code."""
+    draft_columns = {
+        "source_message_id": "TEXT",
+        "channel": "TEXT",
+        "body": "TEXT",
+        "summary": "TEXT",
+        "review_status": "TEXT NOT NULL DEFAULT 'pending'",
+        "prompt_version": "TEXT",
+        "model_name": "TEXT",
+        "generation_mode": "TEXT NOT NULL DEFAULT 'template'",
+        "input_context_json": "TEXT",
+        "output_metadata_json": "TEXT",
+        "review_notes": "TEXT",
+        "rejection_reason": "TEXT",
+        "approved_at": "TEXT",
+        "archived_at": "TEXT",
+    }
+    for column_name, definition in draft_columns.items():
+        _add_column_if_missing(conn, "drafts", column_name, definition)
+
+    conn.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS prompt_versions (
+          prompt_id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          version TEXT NOT NULL,
+          channel TEXT,
+          content_type TEXT,
+          file_path TEXT NOT NULL,
+          description TEXT,
+          is_active INTEGER NOT NULL DEFAULT 1,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS content_reviews (
+          review_id TEXT PRIMARY KEY,
+          draft_id TEXT NOT NULL,
+          action TEXT NOT NULL,
+          review_notes TEXT,
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (draft_id) REFERENCES drafts(draft_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS settings (
+          key TEXT PRIMARY KEY,
+          value TEXT,
+          is_secret INTEGER NOT NULL DEFAULT 0,
+          description TEXT,
+          group_name TEXT NOT NULL DEFAULT 'general',
+          updated_at TEXT NOT NULL
+        );
+
+        UPDATE drafts SET channel = platform WHERE channel IS NULL;
+        UPDATE drafts SET body = content WHERE body IS NULL;
+        UPDATE drafts SET model_name = ai_model WHERE model_name IS NULL;
+        UPDATE drafts SET review_status = 'approved'
+          WHERE status IN ('定稿', '已发布', '已归档')
+            AND review_status = 'pending';
+
+        CREATE INDEX IF NOT EXISTS idx_drafts_channel ON drafts(channel);
+        CREATE INDEX IF NOT EXISTS idx_drafts_review_status ON drafts(review_status);
+        CREATE INDEX IF NOT EXISTS idx_drafts_generation_mode ON drafts(generation_mode);
+        CREATE INDEX IF NOT EXISTS idx_prompt_versions_active ON prompt_versions(is_active);
+        CREATE INDEX IF NOT EXISTS idx_content_reviews_draft_id ON content_reviews(draft_id);
+        CREATE INDEX IF NOT EXISTS idx_settings_group ON settings(group_name);
+        """
+    )
+    _seed_default_settings(conn)
+
+
+def _seed_default_settings(conn: sqlite3.Connection) -> None:
+    defaults = [
+        ("tinytrouter_base_url", "http://127.0.0.1:20129/v1", 0, "LLM API 端点地址", "llm"),
+        ("tinytrouter_api_key", "", 1, "LLM API 密钥（留空则不需要）", "llm"),
+        ("tinytrouter_model_map", "deepseek-chat=SS/deepseek-v4-flash,deepseek-reasoner=SS/deepseek-v4-flash", 0, "模型别名映射（格式：别名=实际模型,...）", "llm"),
+        ("default_llm_model", "deepseek-chat", 0, "默认 LLM 模型", "llm"),
+        ("default_llm_temperature", "0.7", 0, "默认生成温度（0.0-2.0）", "llm"),
+        ("default_llm_max_tokens", "4000", 0, "默认最大 token 数", "llm"),
+        ("image_gen_base_url", "", 0, "图片生成 API 端点地址", "image"),
+        ("image_gen_api_key", "", 1, "图片生成 API 密钥", "image"),
+        ("image_gen_model", "", 0, "图片生成模型", "image"),
+        ("jarvis_port", "8080", 0, "Workbench 服务端口", "system"),
+        ("jarvis_safe_mode", "true", 0, "安全模式（只允许本机访问）", "system"),
+        ("jarvis_public_access", "false", 0, "允许局域网访问", "system"),
+        ("default_platform", "公众号", 0, "默认内容平台（公众号/小红书/视频号）", "content"),
+        ("default_content_type", "文章", 0, "默认内容类型（文章/短文/脚本）", "content"),
+        ("default_target_audience", "普通读者", 0, "默认目标读者", "content"),
+    ]
+    timestamp = now()
+    conn.executemany(
+        """
+        INSERT OR IGNORE INTO settings
+          (key, value, is_secret, description, group_name, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        [(*entry, timestamp) for entry in defaults],
+    )
 
 
 def ensure_initialized() -> None:

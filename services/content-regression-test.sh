@@ -5,6 +5,11 @@ set -euo pipefail
 # 验证所有 API 仍然可用，新功能正常工作
 
 BASE="${JARVIS_BASE_URL:-http://127.0.0.1:8080}"
+PYTHON_BIN="${PYTHON_BIN:-$(command -v python3 || command -v python || true)}"
+if [ -z "$PYTHON_BIN" ]; then
+  echo "✗ 未找到 Python，请先安装 python3"
+  exit 1
+fi
 
 echo "========== V4.0 内容生产回归测试 =========="
 echo ""
@@ -53,10 +58,11 @@ echo "测试 4: 验证审核 API 可用..."
 draft_resp=$(curl -s -X POST "$BASE/api/drafts" \
   -H "Content-Type: application/json" \
   -d '{"title": "回归测试草稿", "platform": "公众号", "content_type": "文章", "content": "测试内容", "status": "草稿"}')
-draft_id=$(echo "$draft_resp" | python -c "import sys, json; print(json.load(sys.stdin).get('draft_id', ''))")
+draft_id=$(echo "$draft_resp" | "$PYTHON_BIN" -c "import sys, json; print(json.load(sys.stdin).get('draft_id', ''))")
 
 if [ -z "$draft_id" ]; then
   echo "✗ 创建测试草稿失败"
+  echo "$draft_resp"
   exit 1
 fi
 
@@ -90,11 +96,14 @@ echo "测试 5: 验证归档 API 可用..."
 draft_resp=$(curl -s -X POST "$BASE/api/drafts" \
   -H "Content-Type: application/json" \
   -d '{"title": "归档回归测试", "platform": "公众号", "content_type": "文章", "content": "测试内容", "status": "定稿"}')
-draft_id=$(echo "$draft_resp" | python -c "import sys, json; print(json.load(sys.stdin).get('draft_id', ''))")
+draft_id=$(echo "$draft_resp" | "$PYTHON_BIN" -c "import sys, json; print(json.load(sys.stdin).get('draft_id', ''))")
 
 # 直接归档（简化测试，假设已批准）
 # 注意：实际需要先批准，但这里简化测试
 echo "⚠ 归档 API 测试需要批准的草稿（简化跳过）"
+if [ -n "$draft_id" ]; then
+  curl -s -X DELETE "$BASE/api/drafts/$draft_id" > /dev/null
+fi
 echo ""
 
 # 6. 验证没有公网发布接口

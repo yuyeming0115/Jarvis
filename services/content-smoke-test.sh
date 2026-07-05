@@ -5,6 +5,11 @@ set -euo pipefail
 # 测试从选题到归档的完整链路
 
 BASE="${JARVIS_BASE_URL:-http://127.0.0.1:8080}"
+PYTHON_BIN="${PYTHON_BIN:-$(command -v python3 || command -v python || true)}"
+if [ -z "$PYTHON_BIN" ]; then
+  echo "✗ 未找到 Python，请先安装 python3"
+  exit 1
+fi
 
 echo "===== Jarvis V4.0 内容生产 Smoke Test ====="
 echo ""
@@ -22,7 +27,7 @@ topic_resp=$(curl -s -X POST "$BASE/api/topics" \
     "tags": ["测试"]
   }')
 
-topic_id=$(echo "$topic_resp" | python -c "import sys, json; print(json.load(sys.stdin).get('topic_id', ''))")
+topic_id=$(echo "$topic_resp" | "$PYTHON_BIN" -c "import sys, json; print(json.load(sys.stdin).get('topic_id', ''))")
 
 if [ -z "$topic_id" ]; then
   echo "✗ 创建选题失败"
@@ -42,7 +47,7 @@ draft_resp=$(curl -s -X POST "$BASE/api/topics/$topic_id/generate-draft" \
     "generation_mode": "auto"
   }')
 
-draft_id=$(echo "$draft_resp" | python -c "import sys, json; print(json.load(sys.stdin).get('draft_id', ''))")
+draft_id=$(echo "$draft_resp" | "$PYTHON_BIN" -c "import sys, json; print(json.load(sys.stdin).get('draft_id', ''))")
 
 if [ -z "$draft_id" ]; then
   echo "✗ 生成草稿失败"
@@ -56,9 +61,9 @@ echo ""
 # 3. 读取草稿详情
 echo "步骤 3: 读取草稿详情..."
 draft_detail=$(curl -s "$BASE/api/drafts/$draft_id")
-draft_title=$(echo "$draft_detail" | python -c "import sys, json; print(json.load(sys.stdin).get('title', ''))")
-draft_status=$(echo "$draft_detail" | python -c "import sys, json; print(json.load(sys.stdin).get('status', ''))")
-draft_word_count=$(echo "$draft_detail" | python -c "import sys, json; print(json.load(sys.stdin).get('word_count', 0))")
+draft_title=$(echo "$draft_detail" | "$PYTHON_BIN" -c "import sys, json; print(json.load(sys.stdin).get('title', ''))")
+draft_status=$(echo "$draft_detail" | "$PYTHON_BIN" -c "import sys, json; print(json.load(sys.stdin).get('status', ''))")
+draft_word_count=$(echo "$draft_detail" | "$PYTHON_BIN" -c "import sys, json; print(json.load(sys.stdin).get('word_count', 0))")
 
 echo "  标题: $draft_title"
 echo "  状态: $draft_status"
@@ -102,7 +107,7 @@ approve_resp=$(curl -s -X POST "$BASE/api/drafts/$draft_id/approve" \
     "review_notes": "Smoke test 批准"
   }')
 
-draft_status=$(curl -s "$BASE/api/drafts/$draft_id" | python -c "import sys, json; print(json.load(sys.stdin).get('status', ''))")
+draft_status=$(curl -s "$BASE/api/drafts/$draft_id" | "$PYTHON_BIN" -c "import sys, json; print(json.load(sys.stdin).get('status', ''))")
 
 if [ "$draft_status" != "定稿" ]; then
   echo "✗ 批准失败，当前状态: $draft_status"
@@ -118,7 +123,7 @@ archive_resp=$(curl -s -X POST "$BASE/api/drafts/$draft_id/archive-wiki" \
   -H "Content-Type: application/json" \
   -d '{}')
 
-wiki_page_id=$(echo "$archive_resp" | python -c "import sys, json; print(json.load(sys.stdin).get('page_id', ''))")
+wiki_page_id=$(echo "$archive_resp" | "$PYTHON_BIN" -c "import sys, json; print(json.load(sys.stdin).get('page_id', ''))")
 
 if [ -z "$wiki_page_id" ]; then
   echo "✗ 归档失败"
@@ -132,7 +137,7 @@ echo ""
 # 8. 验证 wiki 文件
 echo "步骤 8: 验证 wiki 文件..."
 wiki_detail=$(curl -s "$BASE/api/wiki/$wiki_page_id")
-wiki_slug=$(echo "$wiki_detail" | python -c "import sys, json; print(json.load(sys.stdin).get('slug', ''))")
+wiki_slug=$(echo "$wiki_detail" | "$PYTHON_BIN" -c "import sys, json; print(json.load(sys.stdin).get('slug', ''))")
 
 echo "  Wiki slug: $wiki_slug"
 
@@ -148,8 +153,8 @@ echo ""
 
 # 9. 验证草稿状态
 echo "步骤 9: 验证草稿状态..."
-draft_status=$(curl -s "$BASE/api/drafts/$draft_id" | python -c "import sys, json; print(json.load(sys.stdin).get('status', ''))")
-draft_archived_at=$(curl -s "$BASE/api/drafts/$draft_id" | python -c "import sys, json; print(json.load(sys.stdin).get('archived_at', ''))")
+draft_status=$(curl -s "$BASE/api/drafts/$draft_id" | "$PYTHON_BIN" -c "import sys, json; print(json.load(sys.stdin).get('status', ''))")
+draft_archived_at=$(curl -s "$BASE/api/drafts/$draft_id" | "$PYTHON_BIN" -c "import sys, json; print(json.load(sys.stdin).get('archived_at', ''))")
 
 if [ "$draft_status" != "已归档" ]; then
   echo "✗ 草稿状态不正确: $draft_status"
@@ -175,3 +180,12 @@ echo "  - 选题 ID: $topic_id"
 echo "  - 草稿 ID: $draft_id"
 echo "  - Wiki 页面 ID: $wiki_page_id"
 echo "  - 归档文件: $archive_file"
+
+if [ "${JARVIS_KEEP_TEST_DATA:-0}" != "1" ]; then
+  curl -s -X DELETE "$BASE/api/wiki/$wiki_page_id" > /dev/null || true
+  curl -s -X DELETE "$BASE/api/drafts/$draft_id" > /dev/null || true
+  curl -s -X DELETE "$BASE/api/topics/$topic_id" > /dev/null || true
+  rm -f "$archive_file"
+  echo ""
+  echo "测试数据已清理。如需保留测试数据，请设置 JARVIS_KEEP_TEST_DATA=1。"
+fi
